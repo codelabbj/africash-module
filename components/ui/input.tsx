@@ -2,13 +2,27 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+    variant?: "default" | "minimal" | "underline" | "glass"
+    error?: boolean
+    success?: boolean
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, variant = "default", error = false, success = false, ...props }, ref) => {
     return (
       <input
         type={type}
         className={cn(
-          "flex h-11 w-full rounded-lg border-2 border-gray-200 bg-gray-50 px-4 py-3 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 dark:border-gray-600 dark:bg-gray-700 dark:placeholder:text-gray-400 dark:focus-visible:ring-blue-400 dark:focus-visible:border-blue-400 md:text-sm",
+          "minimal-input",
+          {
+            "border-red-500 focus-visible:ring-red-500": error,
+            "border-green-500 focus-visible:ring-green-500": success,
+            "border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0": variant === "underline",
+            "glass border-white/20": variant === "glass",
+            "border-0 bg-transparent focus-visible:ring-0": variant === "minimal",
+          },
           className
         )}
         ref={ref}

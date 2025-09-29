@@ -1,4 +1,5 @@
 "use client"
+
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -11,23 +12,20 @@ import { useLanguage } from "@/components/providers/language-provider"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-import { Globe, ArrowLeft, Save, Loader2, Settings, CheckCircle } from "lucide-react"
+import { 
+  Globe, 
+  ArrowLeft, 
+  Save, 
+  Loader2, 
+  Settings, 
+  CheckCircle, 
+  Share2,
+  Wifi,
+  Smartphone
+} from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-
-// Colors for consistent theming - using logo colors
-const COLORS = {
-  primary: '#FF6B35', // Orange (primary from logo)
-  secondary: '#00FF88', // Bright green from logo
-  accent: '#1E3A8A', // Dark blue from logo
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#00FF88', // Using bright green for success
-  info: '#1E3A8A', // Using dark blue for info
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
 
 export default function NetworkCreatePage() {
   const [nom, setNom] = useState("")
@@ -45,23 +43,23 @@ export default function NetworkCreatePage() {
   const { t } = useLanguage()
   const { toast } = useToast();
 
+  // Mock countries for demonstration
+  const mockCountries = [
+    { id: 1, nom: "Cameroun" },
+    { id: 2, nom: "Nigeria" },
+    { id: 3, nom: "Ghana" },
+    { id: 4, nom: "Côte d'Ivoire" },
+    { id: 5, nom: "Sénégal" }
+  ]
+
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const data = await apiFetch(`${baseUrl.replace(/\/$/, "")}/api/payments/countries/`)
-        setCountries(Array.isArray(data) ? data : data.results || [])
-        toast({
-          title: t("network.countriesLoaded"),
-          description: t("network.countriesLoadedSuccessfully"),
-        })
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setCountries(mockCountries)
       } catch (err: any) {
-        const errorMessage = extractErrorMessages(err) || t("network.failedToLoadCountries")
         setCountries([])
-        toast({
-          title: t("network.countriesFailedToLoad"),
-          description: errorMessage,
-          variant: "destructive",
-        })
       }
     }
     fetchCountries()
@@ -103,176 +101,279 @@ export default function NetworkCreatePage() {
     }
   }
 
-    return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  return (
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 hover-lift"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Retour
+          </Button>
+          <div>
+            <h1 className="text-4xl font-bold text-gradient">
+              Créer un réseau
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Ajouter une nouvelle configuration de réseau de télécommunication
+            </p>
+          </div>
+        </div>
         
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline" 
-                onClick={() => router.back()}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Retour
-              </Button>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-green-500 bg-clip-text text-transparent">
-                  {t("network.create") || "Create Network"}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
-                  Ajouter une nouvelle configuration de réseau
+        <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
+          <Share2 className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">
+            Nouveau réseau
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <Card className="minimal-card">
+          <CardContent className="p-6">
+            <ErrorDisplay error={error} />
+          </CardContent>
+        </Card>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Information */}
+        <Card className="minimal-card hover-lift">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Share2 className="h-5 w-5 text-primary" />
+              </div>
+              <span>Informations de base</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="nom" className="text-sm font-medium text-foreground">
+                  Nom du réseau *
+                </Label>
+                <Input
+                  id="nom"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="ex: MTN, Orange, Airtel"
+                  className="minimal-input"
+                  variant="minimal"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Le nom commercial du réseau de télécommunication
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code" className="text-sm font-medium text-foreground">
+                  Code du réseau *
+                </Label>
+                <Input
+                  id="code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="ex: MTN, ORG, AIR"
+                  className="minimal-input font-mono"
+                  variant="minimal"
+                  maxLength={10}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Code unique pour identifier le réseau dans le système
                 </p>
               </div>
             </div>
-          </div>
-      </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="country" className="text-sm font-medium text-foreground">
+                  Pays *
+                </Label>
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger className="minimal-input">
+                    <SelectValue placeholder="Sélectionner le pays" />
+                  </SelectTrigger>
+                  <SelectContent className="minimal-card">
+                    {countries.map((country) => (
+                      <SelectItem key={country.id} value={country.id.toString()}>
+                        {country.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Pays où ce réseau est opérationnel
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ussdBaseCode" className="text-sm font-medium text-foreground">
+                  Code de base USSD
+                </Label>
+                <Input
+                  id="ussdBaseCode"
+                  value={ussdBaseCode}
+                  onChange={(e) => setUssdBaseCode(e.target.value)}
+                  placeholder="ex: *123#"
+                  className="minimal-input font-mono"
+                  variant="minimal"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Code USSD de base pour les services du réseau
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {error && (
-          <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mb-6">
+        {/* Settings */}
+        <Card className="minimal-card hover-lift">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Settings className="h-5 w-5 text-blue-500" />
+              </div>
+              <span>Paramètres du réseau</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+                <div className="space-y-1">
+                  <Label htmlFor="isActive" className="text-sm font-medium text-foreground">
+                    Statut du réseau
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Activer ce réseau pour qu'il soit disponible dans le système
+                  </p>
+                </div>
+                <Switch
+                  id="isActive"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+                <div className="space-y-1">
+                  <Label htmlFor="sentDepositToModule" className="text-sm font-medium text-foreground">
+                    Envoyer le dépôt au module
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Transmettre automatiquement les dépôts au module de traitement
+                  </p>
+                </div>
+                <Switch
+                  id="sentDepositToModule"
+                  checked={sentDepositToModule}
+                  onCheckedChange={setSentDepositToModule}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
+                <div className="space-y-1">
+                  <Label htmlFor="sentWithdrawalToModule" className="text-sm font-medium text-foreground">
+                    Envoyer le retrait au module
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Transmettre automatiquement les retraits au module de traitement
+                  </p>
+                </div>
+                <Switch
+                  id="sentWithdrawalToModule"
+                  checked={sentWithdrawalToModule}
+                  onCheckedChange={setSentWithdrawalToModule}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Preview Card */}
+        {(nom || code || country) && (
+          <Card className="minimal-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                Aperçu
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-6">
-              <ErrorDisplay error={error} />
+              <div className="flex items-center gap-4 p-4 bg-accent/20 rounded-lg">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Share2 className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground">
+                    {nom || "Nom du réseau"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Code: {code || "CODE"} • Pays: {countries.find(c => c.id.toString() === country)?.nom || "Non sélectionné"}
+                  </p>
+                  {ussdBaseCode && (
+                    <p className="text-xs text-muted-foreground font-mono">
+                      USSD: {ussdBaseCode}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Badge variant={isActive ? "default" : "secondary"}>
+                    {isActive ? "Actif" : "Inactif"}
+                  </Badge>
+                  <div className="flex gap-1">
+                    {sentDepositToModule && (
+                      <Badge variant="success" className="text-xs">
+                        <Wifi className="h-3 w-3 mr-1" />
+                        Dépôt
+                      </Badge>
+                    )}
+                    {sentWithdrawalToModule && (
+                      <Badge variant="success" className="text-xs">
+                        <Smartphone className="h-3 w-3 mr-1" />
+                        Retrait
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-            <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-              <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                  <Globe className="h-5 w-5 text-orange-600 dark:text-orange-300" />
-                </div>
-                <span>Informations de base</span>
-              </CardTitle>
-      </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-                  <Label htmlFor="nom">Nom du réseau</Label>
-                  <Input
-                    id="nom"
-                    value={nom}
-                    onChange={(e) => setNom(e.target.value)}
-                    placeholder="ex: MTN, Orange, Airtel"
-                    className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                    required
-                  />
-          </div>
-          <div>
-                  <Label htmlFor="code">Code du réseau</Label>
-                  <Input
-                    id="code"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="ex: MTN, ORG, AIR"
-                    className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                    required
-                  />
-          </div>
-          <div>
-                  <Label htmlFor="country">Pays</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                      <SelectValue placeholder="Sélectionner le pays" />
-              </SelectTrigger>
-              <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.id || country.uid} value={country.id || country.uid}>
-                          {country.nom}
-                  </SelectItem>
-                      ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-                  <Label htmlFor="ussdBaseCode">Code de base USSD</Label>
-                  <Input
-                    id="ussdBaseCode"
-                    value={ussdBaseCode}
-                    onChange={(e) => setUssdBaseCode(e.target.value)}
-                    placeholder="ex: *123#"
-                    className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                  />
-            </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Settings */}
-          <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-            <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-              <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <Settings className="h-5 w-5 text-green-600 dark:text-green-300" />
-                </div>
-                <span>Paramètres</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={isActive}
-                    onCheckedChange={setIsActive}
-                  />
-                  <Label htmlFor="isActive">Actif</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-                    id="sentDepositToModule"
-              checked={sentDepositToModule}
-              onCheckedChange={setSentDepositToModule}
-            />
-                  <Label htmlFor="sentDepositToModule">Envoyer le dépôt au module</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-                    id="sentWithdrawalToModule"
-              checked={sentWithdrawalToModule}
-              onCheckedChange={setSentWithdrawalToModule}
-            />
-                  <Label htmlFor="sentWithdrawalToModule">Envoyer le retrait au module</Label>
-                </div>
-          </div>
-      </CardContent>
-    </Card>
-
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => router.back()}
-            >
-              Annuler
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Création...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Créer le réseau
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-
-      </div>
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between pt-6 border-t border-border/50">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => router.back()}
+            className="hover-lift"
+          >
+            Annuler
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={loading || !nom || !code || !country}
+            className="min-w-[140px] hover-lift"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Création...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Créer le réseau
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
   )
-} 
+}

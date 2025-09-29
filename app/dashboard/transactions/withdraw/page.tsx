@@ -49,7 +49,7 @@ export default function WithdrawPage() {
   useEffect(() => {
     const fetchNetworks = async () => {
       try {
-        const data = await apiFetch(`${baseUrl}api/payments/networks/`)
+        const data = await apiFetch(`${baseUrl}/api/payments/networks/`)
         setNetworks(data.results || [])
       } catch (err) {
         setError(t("transactions.failedToLoadNetworks") || "Échec du chargement des réseaux")
@@ -86,7 +86,7 @@ export default function WithdrawPage() {
     setLoading(true)
     setError("")
     try {
-      await apiFetch(`${baseUrl}api/payments/transactions/`, {
+      await apiFetch(`${baseUrl}/api/payments/transactions/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pendingPayload),

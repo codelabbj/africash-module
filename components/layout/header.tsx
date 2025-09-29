@@ -1,12 +1,19 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { Bell, LogOut, Settings, User, Search, Menu } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { LanguageSwitcher } from "@/components/ui/language-switcher"
 import { useLanguage } from "@/components/providers/language-provider"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Bell, Settings, User, LogOut } from "lucide-react"
 
 const pageNames: Record<string, string> = {
   "/dashboard": "dashboard.title",
@@ -31,65 +38,92 @@ export function Header() {
   const pageTitle = pageNames[pathname] || "dashboard.title"
 
   return (
-    <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-40">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-green-500 bg-clip-text text-transparent ml-12 lg:ml-0">
-              {t(pageTitle)}
-            </h1>
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="container-minimal flex h-16 items-center justify-between">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">BP</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-foreground tracking-tight">
+                {t(pageTitle)}
+              </h1>
+              <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <button className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
-            
-            {/* Theme Toggle */}
-            <ThemeToggle />
-            
-            {/* Language Switcher */}
-            <LanguageSwitcher />
-            
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-orange-500 dark:hover:ring-orange-400 transition-all">
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          {/* <div className="hidden md:flex relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              className="pl-10 w-64 bg-secondary/50 border-0 focus-visible:ring-0"
+              variant="minimal"
+            />
+          </div> */}
+
+          {/* Notifications */}
+          {/* <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-4 w-4" />
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+              3
+            </span>
+          </Button> */}
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* Language Switcher */}
+          <LanguageSwitcher />
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2 px-2">
+                <Avatar className="h-8 w-8">
                   <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                  <AvatarFallback className="bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-medium text-sm">
                     JD
                   </AvatarFallback>
                 </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-orange-600 text-white text-sm">
-                      JD
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Doe</p>
-                    <p className="text-xs leading-none text-muted-foreground">john@example.com</p>
-                  </div>
+                <div className="hidden md:block text-left">
+                  {/* <p className="text-sm font-medium">John Doe</p> */}
+                  <p className="text-xs text-muted-foreground">Admin</p>
                 </div>
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <div className="flex items-center gap-3 p-4 border-b border-border/50">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src="/placeholder-user.jpg" alt="User" />
+                  <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                    JD
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <p className="text-sm font-medium">John Doe</p>
+                  <p className="text-xs text-muted-foreground">john@example.com</p>
+                </div>
+              </div>
+              <div className="p-2">
+                <DropdownMenuItem className="rounded-lg">
+                  <User className="mr-3 h-4 w-4" />
                   <a href="/dashboard/profile">Profile</a>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
+                <DropdownMenuItem className="rounded-lg">
+                  <Settings className="mr-3 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600 dark:text-red-400">
-                  <LogOut className="mr-2 h-4 w-4" />
+                <DropdownMenuItem className="rounded-lg text-red-600 focus:text-red-600">
+                  <LogOut className="mr-3 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

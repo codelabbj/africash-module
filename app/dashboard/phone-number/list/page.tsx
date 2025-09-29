@@ -132,218 +132,175 @@ export default function PhoneNumberListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            {t("phoneNumbers.list") || "Phone Numbers"}
+          </h1>
+          <p className="text-muted-foreground">
+            Gérer les numéros de téléphone et leurs associations de réseau
+          </p>
+        </div>
         
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-green-500 bg-clip-text text-transparent">
-                {t("phoneNumbers.list") || "Phone Numbers"}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
-                Gérer les numéros de téléphone et leurs associations de réseau
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-5 w-5 text-orange-500" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {numbers.length} numéros
-                  </span>
-                </div>
-              </div>
-              {/* <Link href="/dashboard/phone-number/create">
-                <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter un numéro
-                </Button>
-              </Link> */}
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
+            <Phone className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">
+              {numbers.length} numéros
+            </span>
           </div>
+          {/* <Link href="/dashboard/phone-number/create">
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un numéro
+            </Button>
+          </Link> */}
         </div>
+      </div>
 
-        {/* Filters and Search */}
-        <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mb-6">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-                  placeholder="Rechercher des numéros de téléphone..."
-              value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-            />
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher des numéros de téléphone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Network Filter */}
+            <Select value={networkFilter} onValueChange={setNetworkFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrer par réseau" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les réseaux</SelectItem>
+                {networks.map((network) => (
+                  <SelectItem key={network.id || network.uid} value={network.id || network.uid}>
+                    {network.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <Select 
+              value={sortField || ""} 
+              onValueChange={(value) => setSortField(value as "phone_number" | "network" | null)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Trier par" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="phone_number">Numéro de téléphone</SelectItem>
+                <SelectItem value="network">Réseau</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </CardContent>
+      </Card>
 
-              {/* Network Filter */}
-          <Select value={networkFilter} onValueChange={setNetworkFilter}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                  <SelectValue placeholder="Filtrer par réseau" />
-            </SelectTrigger>
-            <SelectContent>
-                  <SelectItem value="all">Tous les réseaux</SelectItem>
-                  {networks.map((network) => (
-                    <SelectItem key={network.id || network.uid} value={network.id || network.uid}>
-                  {network.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-              {/* Sort */}
-              <Select 
-                value={sortField || ""} 
-                onValueChange={(value) => setSortField(value as "phone_number" | "network" | null)}
-              >
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                  <SelectValue placeholder="Trier par" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="phone_number">Numéro de téléphone</SelectItem>
-                  <SelectItem value="network">Réseau</SelectItem>
-                </SelectContent>
-              </Select>
-        </div>
-          </CardContent>
-        </Card>
-
-        {/* Phone Numbers Table */}
-        <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-          <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-            <CardTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                  <Phone className="h-5 w-5 text-orange-600 dark:text-orange-300" />
+      {/* Phone Numbers Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5 text-primary" />
+            Liste des numéros de téléphone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="text-muted-foreground">Chargement des numéros de téléphone...</span>
               </div>
-              <span>Liste des numéros de téléphone</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-        {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                  <span className="text-gray-600 dark:text-gray-300">Chargement des numéros de téléphone...</span>
-                </div>
-              </div>
-        ) : error ? (
-              <div className="p-6 text-center">
-                <ErrorDisplay error={error} onRetry={() => {/* retry function */}} />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-                    <TableRow className="bg-gray-50 dark:bg-gray-900/50">
-                      <TableHead className="font-semibold">Numéro de téléphone</TableHead>
-                      <TableHead className="font-semibold">Réseau</TableHead>
-                      <TableHead className="font-semibold">Pays</TableHead>
-                      {/* <TableHead className="font-semibold">Statut</TableHead>
-                      <TableHead className="font-semibold">Actions</TableHead> */}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-                    {filteredNumbers.map((number) => (
-                      <TableRow key={number.id || number.uid} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                              <Phone className="h-5 w-5" />
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <ErrorDisplay error={error} />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-semibold">Numéro de téléphone</TableHead>
+                    <TableHead className="font-semibold">Réseau</TableHead>
+                    <TableHead className="font-semibold">Pays</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredNumbers.map((number) => (
+                    <TableRow key={number.id || number.uid} className="hover:bg-accent/50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Phone className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-foreground font-mono">
+                              {number.phone_number || number.number || 'Inconnu'}
                             </div>
-                            <div>
-                              <div className="font-medium text-gray-900 dark:text-gray-100 font-mono">
-                                {number.phone_number || number.number || 'Inconnu'}
-                              </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {number.description || 'Aucune description'}
-                              </div>
+                            <div className="text-sm text-muted-foreground">
+                              {number.description || 'Aucune description'}
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Globe className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {number.network?.nom || number.network_name || 'Inconnu'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {number.country?.nom || number.country_name || 'Inconnu'}
-                          </Badge>
-                        </TableCell>
-                        {/* <TableCell>
-                          <Badge 
-                            className={
-                              number.is_active 
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" 
-                                : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
-                            }
-                          >
-                            <div className="flex items-center space-x-1">
-                              {number.is_active ? (
-                                <CheckCircle className="h-3 w-3" />
-                              ) : (
-                                <XCircle className="h-3 w-3" />
-                              )}
-                              <span>{number.is_active ? 'Actif' : 'Inactif'}</span>
-                            </div>
-                          </Badge>
-                        </TableCell> */}
-                        {/* <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm">
-                              Modifier
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className={
-                                number.is_active 
-                                  ? "text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20" 
-                                  : "text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/20"
-                              }
-                            >
-                              {number.is_active ? 'Désactiver' : 'Activer'}
-                            </Button>
-                          </div>
-                        </TableCell> */}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-              </div>
-        )}
-      </CardContent>
-    </Card>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {number.network?.nom || number.network_name || 'Inconnu'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {number.country?.nom || number.country_name || 'Inconnu'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Empty State */}
-        {!loading && !error && filteredNumbers.length === 0 && (
-          <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mt-6">
-            <CardContent className="p-12 text-center">
-              <Phone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                Aucun numéro de téléphone trouvé
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                {searchTerm ? `Aucun numéro de téléphone ne correspond à "${searchTerm}"` : "Aucun numéro de téléphone n'a encore été ajouté."}
-              </p>
+      {/* Empty State */}
+      {!loading && !error && filteredNumbers.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="space-y-4">
+              <div className="h-16 w-16 rounded-full bg-accent mx-auto flex items-center justify-center">
+                <Phone className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Aucun numéro de téléphone trouvé</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm ? `Aucun numéro de téléphone ne correspond à "${searchTerm}"` : "Aucun numéro de téléphone n'a encore été ajouté."}
+                </p>
+              </div>
               <Link href="/dashboard/phone-number/create">
-                <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white">
+                <Button>
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter le premier numéro
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
-        )}
-
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 } 

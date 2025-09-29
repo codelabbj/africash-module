@@ -8,35 +8,49 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Copy, Eye, DollarSign, Phone, Calendar, Clock, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  Copy, 
+  Eye, 
+  DollarSign, 
+  Phone, 
+  Calendar, 
+  Clock, 
+  AlertTriangle, 
+  CheckCircle, 
+  XCircle, 
+  Loader2,
+  Download,
+  RefreshCw,
+  Waves,
+  TrendingUp
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
-
-// Colors for consistent theming - using logo colors
-const COLORS = {
-  primary: '#FF6B35', // Orange (primary from logo)
-  secondary: '#00FF88', // Bright green from logo
-  accent: '#1E3A8A', // Dark blue from logo
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#00FF88', // Using bright green for success
-  info: '#1E3A8A', // Using dark blue for info
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
 
 interface WaveBusinessTransaction {
   uid: string
   amount: string
   amount_as_integer: number
   recipient_phone: string
-  status: "pending" | "confirmed" | "cancelled" | "expired"
+  status: "pending" | "confirmed" | "cancelled" | "expired" | "failed"
   reference: string
   created_by: number
-  fcm_notifications: any[]
+  fcm_notifications: Array<{
+    data: {
+      date: string
+      time: string
+      phone: string
+      amount: number
+      sender_name: string
+      original_body: string
+    }
+    timestamp: string
+  }>
   callback_url: string
   confirmed_at: string | null
   expires_at: string
@@ -52,88 +66,87 @@ interface ApiResponse {
   results: WaveBusinessTransaction[]
 }
 
-export default function WaveBusinessPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [phoneFilter, setPhoneFilter] = useState("")
-  const [includeExpired, setIncludeExpired] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
+export default function WaveBusinessTransactionPage() {
   const [transactions, setTransactions] = useState<WaveBusinessTransaction[]>([])
-  const [totalCount, setTotalCount] = useState(0)
-  const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [sortField, setSortField] = useState<"amount" | "recipient_phone" | "created_at" | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [sortField, setSortField] = useState<"amount" | "created_at" | "status" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-  const { toast } = useToast()
-  const apiFetch = useApi()
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [detailTransaction, setDetailTransaction] = useState<WaveBusinessTransaction | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState("")
-  const itemsPerPage = 20
+  
+  const apiFetch = useApi()
+  const { toast } = useToast()
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-  // Récupérer les transactions depuis l'API
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true)
-      setError("")
-      try {
-        const params = new URLSearchParams({
-          page: currentPage.toString(),
-          page_size: itemsPerPage.toString(),
-        })
-        
-        if (searchTerm.trim() !== "") {
-          params.append("reference", searchTerm)
-        }
-        if (statusFilter !== "all") {
-          params.append("status", statusFilter)
-        }
-        if (phoneFilter.trim() !== "") {
-          params.append("phone", phoneFilter)
-        }
-        if (includeExpired) {
-          params.append("include_expired", "true")
-        }
-
-        const orderingParam = sortField
-          ? `&ordering=${(sortDirection === "asc" ? "" : "-")}${sortField}`
-          : ""
-        
-        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/?${params.toString()}${orderingParam}`
-        const data: ApiResponse = await apiFetch(endpoint)
-        
-        setTransactions(data.results || [])
-        setTotalCount(data.count || 0)
-        setTotalPages(Math.ceil((data.count || 0) / itemsPerPage))
-        
-        toast({ 
-          title: "Succès", 
-          description: "Transactions Wave Business chargées avec succès" 
-        })
-      } catch (err: any) {
-        const errorMessage = extractErrorMessages(err)
-        setError(errorMessage)
-        setTransactions([])
-        setTotalCount(0)
-        setTotalPages(1)
-        toast({ 
-          title: "Erreur de chargement", 
-          description: errorMessage, 
-          variant: "destructive" 
-        })
-      } finally {
-        setLoading(false)
+  // Fetch transactions from API
+  const fetchTransactions = async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        page_size: "10",
+      })
+      if (searchTerm.trim() !== "") {
+        params.append("search", searchTerm)
       }
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter)
+      }
+      
+      const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/?${params.toString()}`
+      const data = await apiFetch(endpoint)
+      
+      if (data.results) {
+        setTransactions(data.results)
+        setTotalCount(data.count || 0)
+        setTotalPages(Math.ceil((data.count || 0) / 10))
+      } else {
+        // Fallback for non-paginated response
+        setTransactions(Array.isArray(data) ? data : [])
+        setTotalCount(Array.isArray(data) ? data.length : 0)
+        setTotalPages(1)
+      }
+      
+      toast({ 
+        title: "Transactions chargées", 
+        description: "Liste des transactions Wave Business chargée avec succès" 
+      })
+    } catch (err: any) {
+      const errorMessage = extractErrorMessages(err)
+      setError(errorMessage)
+      setTransactions([])
+      setTotalCount(0)
+      setTotalPages(1)
+      toast({ 
+        title: "Échec du chargement", 
+        description: errorMessage, 
+        variant: "destructive" 
+      })
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchTransactions()
-  }, [searchTerm, currentPage, itemsPerPage, baseUrl, statusFilter, phoneFilter, includeExpired, sortField, sortDirection, toast, apiFetch])
+  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection])
 
-  const startIndex = (currentPage - 1) * itemsPerPage
+  const handleRefresh = async () => {
+    await fetchTransactions()
+  }
 
-  const handleSort = (field: "amount" | "recipient_phone" | "created_at") => {
+  const filteredTransactions = transactions // Filtering handled by API
+
+  const handleSort = (field: "amount" | "created_at" | "status") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
@@ -142,71 +155,40 @@ export default function WaveBusinessPage() {
     }
   }
 
-  const getStatusBadge = (status: string, isExpired: boolean) => {
-    if (isExpired) {
-      return (
-        <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Expiré
-        </Badge>
-      )
-    }
-    
-    switch (status) {
-      case "pending":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
-            <Clock className="h-3 w-3 mr-1" />
-            En attente
-          </Badge>
-        )
-      case "confirmed":
-        return (
-          <Badge className="bg-green-100 text-green-500 dark:bg-green-900/20 dark:text-green-300">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Confirmé
-          </Badge>
-        )
-      case "cancelled":
-        return (
-          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300">
-            <XCircle className="h-3 w-3 mr-1" />
-            Annulé
-          </Badge>
-        )
-      default:
-        return (
-          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300">
-            {status}
-          </Badge>
-        )
-    }
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      confirmed: "default",
+      pending: "warning",
+      cancelled: "destructive",
+      expired: "secondary"
+    } as const
+
+    return <Badge variant={variants[status as keyof typeof variants]}>{status}</Badge>
   }
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-"
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  }
-
-  const formatAmount = (amount: string) => {
-    return `${parseFloat(amount).toLocaleString("fr-FR")} FCFA`
-  }
-
-  // Ouvrir les détails d'une transaction
-  const handleOpenDetail = (transaction: WaveBusinessTransaction) => {
+  const handleOpenDetail = async (uid: string) => {
     setDetailModalOpen(true)
-    setDetailTransaction(transaction)
+    setDetailLoading(true)
     setDetailError("")
-    toast({ 
-      title: "Détail chargé", 
-      description: "Détails de la transaction affichés avec succès" 
-    })
+    setDetailTransaction(null)
+    try {
+      const endpoint = `${baseUrl.replace(/\/$/, "")}/api/payments/wave-business-transactions/${uid}/`
+      const data = await apiFetch(endpoint)
+      setDetailTransaction(data)
+      toast({ 
+        title: "Détails chargés", 
+        description: "Détails de la transaction chargés avec succès" 
+      })
+    } catch (err: any) {
+      setDetailError(extractErrorMessages(err))
+      toast({ 
+        title: "Échec du chargement", 
+        description: extractErrorMessages(err), 
+        variant: "destructive" 
+      })
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   const handleCloseDetail = () => {
@@ -215,398 +197,458 @@ export default function WaveBusinessPage() {
     setDetailError("")
   }
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    toast({ title: `${label} copié !` })
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast({
+        title: "Copié!",
+        description: "Le texte a été copié dans le presse-papiers",
+      })
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de copier le texte",
+        variant: "destructive",
+      })
+    }
   }
 
+  const totalAmount = transactions.reduce((sum, t) => sum + t.amount_as_integer, 0)
+  const confirmedAmount = transactions.filter(t => t.status === 'confirmed').reduce((sum, t) => sum + t.amount_as_integer, 0)
+  const pendingAmount = transactions.filter(t => t.status === 'pending').reduce((sum, t) => sum + t.amount_as_integer, 0)
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            Wave Business Transactions
+          </h1>
+          <p className="text-muted-foreground">
+            Surveiller et gérer les transactions Wave Business
+          </p>
+        </div>
         
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-green-500 bg-clip-text text-transparent">
-                Transactions Wave Business
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
-                Gérer et surveiller les transactions Wave Business
-              </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
+            <Waves className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">
+              {totalCount.toLocaleString()} transactions
+            </span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+              {(confirmedAmount / 100).toLocaleString()} XOF confirmées
+            </span>
+          </div>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Exporter
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Total des transactions</p>
+                <p className="text-2xl font-bold text-foreground">{(totalAmount / 100).toLocaleString()} XOF</p>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-green-500" />
+                  <span className="text-xs text-green-500">+8% ce mois</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-primary" />
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {totalCount} transactions
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Confirmées</p>
+                <p className="text-2xl font-bold text-foreground">{(confirmedAmount / 100).toLocaleString()} XOF</p>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span className="text-xs text-green-500">
+                    {Math.round((confirmedAmount / totalAmount) * 100)}% du total
                   </span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and Search */}
-        <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mb-6">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Rechercher par référence..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                />
-              </div>
-
-              {/* Phone Filter */}
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Filtrer par téléphone..."
-                  value={phoneFilter}
-                  onChange={(e) => setPhoneFilter(e.target.value)}
-                  className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                />
-              </div>
-
-              {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                  <SelectValue placeholder="Tous les statuts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="pending">En attente</SelectItem>
-                  <SelectItem value="confirmed">Confirmé</SelectItem>
-                  <SelectItem value="expired">Expiré</SelectItem>
-                  <SelectItem value="cancelled">Annulé</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Include Expired Switch */}
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                <Switch
-                  id="include-expired"
-                  checked={includeExpired}
-                  onCheckedChange={setIncludeExpired}
-                />
-                <label htmlFor="include-expired" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Inclure les expirés
-                </label>
+              <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Transactions Table */}
-        <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-          <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-            <CardTitle className="flex items-center space-x-2">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                <DollarSign className="h-5 w-5 text-orange-600 dark:text-orange-300" />
-              </div>
-              <span>Liste des Transactions</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                  <span className="text-gray-600 dark:text-gray-300">Chargement des transactions...</span>
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">En attente</p>
+                <p className="text-2xl font-bold text-foreground">{(pendingAmount / 100).toLocaleString()} XOF</p>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-yellow-500" />
+                  <span className="text-xs text-yellow-500">
+                    {transactions.filter(t => t.status === 'pending').length} transactions
+                  </span>
                 </div>
               </div>
+              <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Taux de succès</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {Math.round((confirmedAmount / totalAmount) * 100)}%
+                </p>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-green-500" />
+                  <span className="text-xs text-green-500">+5% ce mois</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher une transaction..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                variant="minimal"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="confirmed">Confirmée</SelectItem>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="cancelled">Annulée</SelectItem>
+                <SelectItem value="expired">Expirée</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Exporter CSV
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Transactions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Waves className="h-5 w-5 text-primary" />
+            Liste des transactions Wave
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="text-muted-foreground">Chargement des transactions...</span>
+              </div>
+            </div>
             ) : error ? (
               <div className="p-6 text-center">
-                <ErrorDisplay
-                  error={error}
-                  onRetry={() => {
-                    setCurrentPage(1)
-                    setError("")
-                  }}
-                  variant="full"
-                  showDismiss={false}
+                <ErrorDisplay 
+                  error={error} 
+                  onRetry={handleRefresh}
+                  className="mb-4"
                 />
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 dark:bg-gray-900/50">
-                      <TableHead className="font-semibold">Référence</TableHead>
-                      <TableHead className="font-semibold">
-                        <Button variant="ghost" onClick={() => handleSort("amount")} className="h-auto p-0 font-semibold">
-                          Montant
-                          <ArrowUpDown className="ml-2 h-4 w-4" />
-                        </Button>
-                      </TableHead>
-                      <TableHead className="font-semibold">
-                        <Button variant="ghost" onClick={() => handleSort("recipient_phone")} className="h-auto p-0 font-semibold">
-                          Téléphone destinataire
-                          <ArrowUpDown className="ml-2 h-4 w-4" />
-                        </Button>
-                      </TableHead>
-                      <TableHead className="font-semibold">Statut</TableHead>
-                      <TableHead className="font-semibold">
-                        <Button variant="ghost" onClick={() => handleSort("created_at")} className="h-auto p-0 font-semibold">
-                          Date de création
-                          <ArrowUpDown className="ml-2 h-4 w-4" />
-                        </Button>
-                      </TableHead>
-                      <TableHead className="font-semibold">Date d'expiration</TableHead>
-                      <TableHead className="font-semibold text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.map((transaction) => (
-                      <TableRow key={transaction.uid} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                        <TableCell className="font-mono text-sm">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
-                              {transaction.reference.charAt(0).toUpperCase()}
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-semibold">Transaction</TableHead>
+                    <TableHead className="font-semibold">Montant</TableHead>
+                    <TableHead className="font-semibold">Destinataire</TableHead>
+                    <TableHead className="font-semibold">Statut</TableHead>
+                    <TableHead className="font-semibold">Référence</TableHead>
+                    <TableHead className="font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((transaction) => (
+                    <TableRow key={transaction.uid} className="hover:bg-accent/50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Waves className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-foreground">
+                              {transaction.uid}
                             </div>
-                            <span>{transaction.reference}</span>
+                            <div className="text-sm text-muted-foreground">
+                              ID: {transaction.uid.substring(0, 8)}...
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center space-x-2">
-                            {/* <DollarSign className="h-4 w-4 text-green-600" /> */}
-                            <span>{formatAmount(transaction.amount)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Phone className="h-4 w-4 text-blue-600" />
-                            <span>{transaction.recipient_phone}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(transaction.status, transaction.is_expired)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Calendar className="h-4 w-4 text-gray-600" />
-                            <span>{formatDate(transaction.created_at)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4 text-orange-600" />
-                            <span>{formatDate(transaction.expires_at)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-lg font-semibold text-foreground">
+                          {(transaction.amount_as_integer / 100).toLocaleString()} XOF
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground font-mono">
+                            {transaction.recipient_phone}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(transaction.status)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-foreground font-mono">
+                          {transaction.reference}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(transaction.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleOpenDetail(transaction)}
-                            className="border-gray-200 dark:border-gray-600"
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => copyToClipboard(transaction.uid)}
                           >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Détails
+                            <Copy className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleOpenDetail(transaction.uid)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Résultats affichés : {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalCount)} sur {totalCount}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="border-gray-200 dark:border-gray-600"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Précédent
-              </Button>
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? "bg-orange-500 text-white" : "border-gray-200 dark:border-gray-600"}
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="border-gray-200 dark:border-gray-600"
-              >
-                Suivant
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Affichage de {((currentPage - 1) * 10) + 1} à {Math.min(currentPage * 10, totalCount)} sur {totalCount} résultats
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Précédent
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
-        {/* Modal des détails de la transaction */}
-        <Dialog open={detailModalOpen} onOpenChange={(open) => { if (!open) handleCloseDetail() }}>
-          <DialogContent className="bg-white dark:bg-gray-800 border-0 shadow-xl max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                  <Eye className="h-5 w-5 text-orange-600" />
-                </div>
-                <span>Détails de la transaction</span>
-              </DialogTitle>
-            </DialogHeader>
-            {detailLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                  <span className="text-gray-600 dark:text-gray-300">Chargement des détails...</span>
-                </div>
-              </div>
-            ) : detailError ? (
-              <ErrorDisplay
-                error={detailError}
-                variant="inline"
-                showRetry={false}
-                className="mb-4"
-              />
-            ) : detailTransaction ? (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                      <DollarSign className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">UID</div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-sm font-medium">{detailTransaction.uid}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(detailTransaction.uid, "UID")}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                      <DollarSign className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Référence</div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-sm font-medium">{detailTransaction.reference}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(detailTransaction.reference, "Référence")}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                      <DollarSign className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Montant</div>
-                      <div className="font-medium">{formatAmount(detailTransaction.amount)}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                      <Phone className="h-4 w-4 text-indigo-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Téléphone</div>
-                      <div className="font-medium">{detailTransaction.recipient_phone}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                      <Calendar className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Créé le</div>
-                      <div className="font-medium">{formatDate(detailTransaction.created_at)}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                      <Clock className="h-4 w-4 text-red-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Expire le</div>
-                      <div className="font-medium">{formatDate(detailTransaction.expires_at)}</div>
-                    </div>
+      {/* Transaction Details Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={(open) => { if (!open) handleCloseDetail() }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Détails de la transaction Wave</DialogTitle>
+          </DialogHeader>
+          {detailLoading ? (
+            <div className="p-4 text-center">Chargement...</div>
+          ) : detailError ? (
+            <ErrorDisplay
+              error={detailError}
+              variant="inline"
+              showRetry={false}
+              className="mb-4"
+            />
+          ) : detailTransaction ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">UID</label>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm">{detailTransaction.uid}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(detailTransaction.uid)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <span className="text-sm font-medium">Statut</span>
-                    {getStatusBadge(detailTransaction.status, detailTransaction.is_expired)}
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <span className="text-sm font-medium">Créé par</span>
-                    <span className="text-sm">{detailTransaction.created_by}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <span className="text-sm font-medium">Notifications FCM</span>
-                    <span className="text-sm">{detailTransaction.fcm_notifications.length} notification(s)</span>
-                  </div>
-
-                  <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                    <div className="text-sm font-medium mb-2">URL de callback</div>
-                    <div className="text-sm break-all text-gray-600 dark:text-gray-400">{detailTransaction.callback_url}</div>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Statut</label>
+                  {getStatusBadge(detailTransaction.status)}
                 </div>
               </div>
-            ) : null}
-            <DialogClose asChild>
-              <Button className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white">
-                Fermer
-              </Button>
-            </DialogClose>
-          </DialogContent>
-        </Dialog>
-      </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Montant</label>
+                  <span className="text-lg font-semibold">{(detailTransaction.amount_as_integer / 100).toLocaleString()} XOF</span>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Téléphone destinataire</label>
+                  <span className="text-sm font-mono">{detailTransaction.recipient_phone}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Référence</label>
+                  <span className="text-sm font-mono">{detailTransaction.reference}</span>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Créé par</label>
+                  <span className="text-sm">User ID: {detailTransaction.created_by}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">URL de callback</label>
+                <span className="text-sm break-all">{detailTransaction.callback_url}</span>
+              </div>
+
+              {detailTransaction.fcm_notifications && detailTransaction.fcm_notifications.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Notifications FCM</label>
+                  <div className="space-y-2">
+                    {detailTransaction.fcm_notifications.map((notification, index) => (
+                      <div key={index} className="p-3 bg-accent rounded-lg">
+                        <div className="text-sm font-medium text-foreground mb-1">
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-2">
+                          <strong>Expéditeur:</strong> {notification.data.sender_name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {notification.data.original_body}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Date de création</label>
+                  <span className="text-sm">{new Date(detailTransaction.created_at).toLocaleString()}</span>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Dernière mise à jour</label>
+                  <span className="text-sm">{new Date(detailTransaction.updated_at).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {detailTransaction.confirmed_at && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Confirmé le</label>
+                  <span className="text-sm">{new Date(detailTransaction.confirmed_at).toLocaleString()}</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Expire le</label>
+                <span className="text-sm">{new Date(detailTransaction.expires_at).toLocaleString()}</span>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button onClick={handleCloseDetail} className="w-full">
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

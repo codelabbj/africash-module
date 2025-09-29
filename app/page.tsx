@@ -2,6 +2,7 @@
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 export default function SignInPage() {
   const router = useRouter()
@@ -20,16 +21,29 @@ export default function SignInPage() {
   }, [router])
 
   if (checking) {
-    // Show a fallback UI while checking for the access token
+    // Show a minimalist loading screen
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-gray-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <span className="text-gray-700 dark:text-gray-200 text-lg">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <img src="/logo.png" alt="Pal Module Logo" className="h-16 w-16 animate-pulse" />
+            <div className="absolute -top-1 -right-1">
+              <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center animate-pulse">
+                <Loader2 className="h-3 w-3 text-white animate-spin" />
+              </div>
+            </div>
+          </div>
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-gradient">Pal Module</h1>
+            <p className="text-muted-foreground">Vérification de la session...</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-gray-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background">
       <SignInForm />
     </div>
   )

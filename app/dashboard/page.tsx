@@ -2,887 +2,1100 @@
 
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
-import { ChartContainer } from "@/components/ui/chart"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { useApi } from "@/lib/useApi"
 import { useLanguage } from "@/components/providers/language-provider"
-import { useRouter } from "next/navigation"
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from "recharts";
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { 
-  ClipboardList, 
   Users, 
-  KeyRound, 
-  Bell, 
-  Clock, 
-  TrendingUp, 
-  Loader, 
-  ServerCrash, 
   DollarSign, 
-  RefreshCw, 
-  UserCheck,
-  Activity,
-  Zap,
-  Shield,
-  Globe,
-  Smartphone,
-  MessageSquare,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
+  Activity, 
+  TrendingUp, 
   ArrowUpRight,
   ArrowDownRight,
   Eye,
   Calendar,
   BarChart3,
   CreditCard,
-  Settings,
   Waves,
+  Smartphone,
+  MessageSquare,
+  Bell,
+  Globe,
   Phone,
-  Wallet
-} from "lucide-react";
-import { ErrorDisplay, extractErrorMessages } from "@/components/ui/error-display"
+  Monitor,
+  Settings,
+  Zap,
+  Shield,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Timer,
+  DollarSign as DollarIcon,
+  PieChart,
+  LineChart,
+  TrendingDown
+} from "lucide-react"
+import { ErrorDisplay } from "@/components/ui/error-display"
+import { 
+  LineChart as RechartsLineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area
+} from "recharts"
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://connect.api.blaffa.net"
 
-// Colors for charts and UI elements - using logo colors
-const COLORS = {
-  primary: '#FF6B35', // Orange (primary from logo)
-  secondary: '#00FF88', // Bright green from logo
-  accent: '#1E3A8A', // Dark blue from logo
-  danger: '#EF4444',
-  warning: '#F97316',
-  success: '#00FF88', // Using bright green for success
-  info: '#1E3A8A', // Using dark blue for info
-  purple: '#8B5CF6',
-  pink: '#EC4899',
-  indigo: '#6366F1'
-};
+// TypeScript interfaces for API responses
+interface DashboardSummary {
+  today_transactions: number
+  today_completed: number
+  today_revenue: number
+  today_success_rate: number
+  online_devices: number
+  pending_transactions: number
+  last_updated: string
+}
 
-const CHART_COLORS = ['#FF6B35', '#00FF88', '#1E3A8A', '#EF4444', '#8B5CF6', '#EC4899'];
+interface NotificationStats {
+  task_stats: {
+    active: number
+    scheduled: number
+    reserved: number
+  }
+  user_stats: {
+    total_users: number
+    active_users: number
+    pending_users: number
+    verified_users: number
+    users_registered_today: number
+    users_registered_week: number
+  }
+  code_stats: {
+    pending_password_reset: number
+    pending_email_verification: number
+    pending_phone_verification: number
+  }
+  notification_info: {
+    email_service: string
+    sms_service: string
+    async_enabled: boolean
+    logging_enabled: boolean
+  }
+  timestamp: string
+}
 
-export default function DashboardPage() {
-  const [stats, setStats] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [authError, setAuthError] = useState("")
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [showOnlyActiveUsers, setShowOnlyActiveUsers] = useState(false)
-  const [summary, setSummary] = useState<any>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError] = useState("");
-  const [transactionStats, setTransactionStats] = useState<any>(null);
-  const [transactionStatsLoading, setTransactionStatsLoading] = useState(false);
-  const [transactionStatsError, setTransactionStatsError] = useState("");
-  const [systemEvents, setSystemEvents] = useState<any[]>([]);
-  const [systemEventsLoading, setSystemEventsLoading] = useState(false);
-  const [systemEventsError, setSystemEventsError] = useState("");
-  const [balanceOps, setBalanceOps] = useState<any>(null);
-  const [balanceOpsLoading, setBalanceOpsLoading] = useState(false);
-  const [balanceOpsError, setBalanceOpsError] = useState("");
-  const [rechargeStats, setRechargeStats] = useState<any>(null);
-  const [rechargeLoading, setRechargeLoading] = useState(false);
-  const [rechargeError, setRechargeError] = useState("");
-  const [momoPayStats, setMomoPayStats] = useState<any>(null);
-  const [momoPayLoading, setMomoPayLoading] = useState(false);
-  const [momoPayError, setMomoPayError] = useState("");
-  const [waveStats, setWaveStats] = useState<any>(null);
-  const [waveLoading, setWaveLoading] = useState(false);
-  const [waveError, setWaveError] = useState("");
+interface TransactionStats {
+  total_transactions: number
+  completed_transactions: number
+  success_transactions: number
+  failed_transactions: number
+  pending_transactions: number
+  processing_transactions: number
+  total_amount: string
+  success_rate: string
+  avg_processing_time: number | null
+  deposits_count: number
+  withdrawals_count: number
+  deposits_amount: string
+  withdrawals_amount: string
+}
 
-  const apiFetch = useApi();
-  const { t } = useLanguage();
-  const router = useRouter();
-  const { toast } = useToast();
+interface SystemEvent {
+  uid: string
+  device: string
+  device_id: string
+  event_type: string
+  description: string
+  level: string
+  data: any
+  created_at: string
+}
 
-  const fetchStats = async () => {
-    setLoading(true);
-    setError("");
-    setAuthError("");
-    setShowAuthModal(false);
-    try {
-      const data = await apiFetch(`${baseUrl}api/auth/admin/notifications/stats/`);
-      setStats(data);
-      toast({
-        title: "Succès",
-        description: "Statistiques chargées avec succès",
-      });
-    } catch (err: any) {
-      let backendError = extractErrorMessages(err) || "Échec du chargement des statistiques";
-      if (
-        err?.code === 'token_not_valid' ||
-        err?.status === 401 ||
-        (typeof backendError === 'string' && backendError.toLowerCase().includes('token'))
-      ) {
-        setAuthError(backendError);
-        setShowAuthModal(true);
-        setLoading(false);
-        return;
-      }
-      setError(backendError);
-      toast({
-        title: "Échec du chargement des statistiques",
-        description: backendError,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+interface SystemEventsResponse {
+  count: number
+  next: string | null
+  previous: string | null
+  results: SystemEvent[]
+}
+
+interface BalanceOperationsStats {
+  period_days: number
+  start_date: string
+  adjustments: {
+    total_count: number
+    total_credits: {
+      count: number
+      total: number | null
     }
-  };
+    total_debits: {
+      count: number
+      total: number | null
+    }
+    by_admin: any[]
+  }
+  refunds: {
+    total_count: number
+    total_amount: number
+    by_admin: Array<{
+      created_by__first_name: string
+      created_by__last_name: string
+      created_by__email: string
+      count: number
+      total_amount: number
+    }>
+  }
+  generated_at: string
+}
 
-  // Fetch all data
+interface RechargeRequestStats {
+  total_requests: number
+  pending_review: number
+  total_approved_amount: number
+  by_status: {
+    pending: { name: string; count: number }
+    proof_submitted: { name: string; count: number }
+    under_review: { name: string; count: number }
+    approved: { name: string; count: number }
+    rejected: { name: string; count: number }
+    cancelled: { name: string; count: number }
+  }
+  month_stats: {
+    total_requests: number
+    approved_count: number
+    approved_amount: number
+    approval_rate: number
+  }
+}
+
+interface MomoPayStats {
+  total_transactions: number
+  pending_count: number
+  confirmed_count: number
+  expired_count: number
+  cancelled_count: number
+  total_amount_confirmed: number
+  confirmation_rate: number
+}
+
+interface WaveBusinessStats {
+  total_transactions: number
+  pending_count: number
+  confirmed_count: number
+  expired_count: number
+  cancelled_count: number
+  total_amount_confirmed: number
+  confirmation_rate: number
+}
+
+// Ultra-minimalist color palette
+const COLORS = {
+  primary: '#00A86B',
+  secondary: '#6B7280',
+  accent: '#F3F4F6',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+}
+
+const CHART_COLORS = ['#00A86B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#84CC16']
+
+export default function Dashboard() {
+  const [showOnlyActiveUsers, setShowOnlyActiveUsers] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { t } = useLanguage()
+  const { toast } = useToast()
+  const api = useApi()
+
+  // State for all API data
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null)
+  const [notificationStats, setNotificationStats] = useState<NotificationStats | null>(null)
+  const [transactionStats, setTransactionStats] = useState<TransactionStats | null>(null)
+  const [systemEvents, setSystemEvents] = useState<SystemEventsResponse | null>(null)
+  const [balanceOperations, setBalanceOperations] = useState<BalanceOperationsStats | null>(null)
+  const [rechargeRequests, setRechargeRequests] = useState<RechargeRequestStats | null>(null)
+  const [momoPayStats, setMomoPayStats] = useState<MomoPayStats | null>(null)
+  const [waveBusinessStats, setWaveBusinessStats] = useState<WaveBusinessStats | null>(null)
+
+  // Helper function to add timeout to API calls
+  const apiWithTimeout = async (url: string, timeoutMs: number = 10000) => {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+    )
+    
+    return Promise.race([
+      api(url),
+      timeoutPromise
+    ])
+  }
+
+  // Helper function to retry API calls with exponential backoff
+  const apiWithRetry = async (url: string, maxRetries: number = 2) => {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await apiWithTimeout(url, 10000)
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw error
+        }
+        
+        // Exponential backoff: wait 1s, then 2s, then 4s
+        const delay = Math.pow(2, attempt) * 1000
+        console.log(`API call failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+
+  const fetchAllData = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      // Check if baseUrl is set
+      if (!baseUrl) {
+        console.error('NEXT_PUBLIC_API_BASE_URL is not set')
+        setError('URL de base de l\'API non configurée')
+        setIsLoading(false)
+        return
+      }
+
+      console.log('Fetching data from:', baseUrl)
+
+      // Fetch all API data in parallel with timeout protection and retry
+      const [
+        summaryRes,
+        notificationRes,
+        transactionRes,
+        systemEventsRes,
+        balanceOperationsRes,
+        rechargeRequestsRes,
+        momoPayRes,
+        waveBusinessRes
+      ] = await Promise.allSettled([
+        apiWithRetry(`${baseUrl}/api/payments/dashboard/summary/`),
+        apiWithRetry(`${baseUrl}/api/auth/admin/notifications/stats/`),
+        apiWithRetry(`${baseUrl}/api/payments/stats/transactions/`),
+        apiWithRetry(`${baseUrl}/api/payments/system-events/`),
+        apiWithRetry(`${baseUrl}/api/payments/admin/balance-operations/stats/`),
+        apiWithRetry(`${baseUrl}/api/payments/user/recharge_requests/stats/`),
+        apiWithRetry(`${baseUrl}/api/payments/momo-pay-transactions/stats/`),
+        apiWithRetry(`${baseUrl}/api/payments/wave-business-transactions/stats/`)
+      ])
+
+      // Process results
+      if (summaryRes.status === 'fulfilled' && summaryRes.value) {
+        console.log('Dashboard summary loaded:', summaryRes.value)
+        setDashboardSummary(summaryRes.value)
+      }
+      if (notificationRes.status === 'fulfilled' && notificationRes.value) {
+        console.log('Notification stats loaded:', notificationRes.value)
+        setNotificationStats(notificationRes.value)
+      }
+      if (transactionRes.status === 'fulfilled' && transactionRes.value) {
+        console.log('Transaction stats loaded:', transactionRes.value)
+        setTransactionStats(transactionRes.value)
+      }
+      if (systemEventsRes.status === 'fulfilled' && systemEventsRes.value) {
+        console.log('System events loaded:', systemEventsRes.value)
+        setSystemEvents(systemEventsRes.value)
+      }
+      if (balanceOperationsRes.status === 'fulfilled' && balanceOperationsRes.value) {
+        console.log('Balance operations loaded:', balanceOperationsRes.value)
+        setBalanceOperations(balanceOperationsRes.value)
+      }
+      if (rechargeRequestsRes.status === 'fulfilled' && rechargeRequestsRes.value) {
+        console.log('Recharge requests loaded:', rechargeRequestsRes.value)
+        setRechargeRequests(rechargeRequestsRes.value)
+      }
+      if (momoPayRes.status === 'fulfilled' && momoPayRes.value) {
+        console.log('MoMo Pay stats loaded:', momoPayRes.value)
+        setMomoPayStats(momoPayRes.value)
+      }
+      if (waveBusinessRes.status === 'fulfilled' && waveBusinessRes.value) {
+        console.log('Wave Business stats loaded:', waveBusinessRes.value)
+        setWaveBusinessStats(waveBusinessRes.value)
+      }
+
+      // Check for any failures
+      const failures = [
+        summaryRes, notificationRes, transactionRes, systemEventsRes,
+        balanceOperationsRes, rechargeRequestsRes, momoPayRes, waveBusinessRes
+      ].filter(result => result.status === 'rejected')
+
+      if (failures.length > 0) {
+        console.warn(`${failures.length} API calls failed:`, failures.map(f => f.reason))
+        
+        // Check if failures are due to timeout
+        const timeoutFailures = failures.filter(f => 
+          f.reason?.message?.includes('Request timeout')
+        )
+        
+        if (timeoutFailures.length > 0) {
+          console.warn(`${timeoutFailures.length} API calls timed out`)
+          toast({
+            title: "Timeout des requêtes",
+            description: `${timeoutFailures.length} requêtes ont expiré. Vérifiez votre connexion réseau.`,
+            variant: "destructive",
+          })
+        }
+        
+        // If all API calls failed, show demo data
+        if (failures.length === 8) {
+          console.log('All API calls failed, showing demo data')
+          setError('Impossible de se connecter à l\'API. Affichage des données de démonstration.')
+          setDashboardSummary({
+            today_transactions: 11,
+            today_completed: 3,
+            today_revenue: 51000.0,
+            today_success_rate: 27.27,
+            online_devices: 3,
+            pending_transactions: 0,
+            last_updated: new Date().toISOString()
+          })
+          setNotificationStats({
+            task_stats: { active: 0, scheduled: 0, reserved: 0 },
+            user_stats: { total_users: 7, active_users: 6, pending_users: 1, verified_users: 6, users_registered_today: 0, users_registered_week: 4 },
+            code_stats: { pending_password_reset: 0, pending_email_verification: 0, pending_phone_verification: 0 },
+            notification_info: { email_service: "SendGrid", sms_service: "Pending (Twilio integration)", async_enabled: true, logging_enabled: true },
+            timestamp: new Date().toISOString()
+          })
+          setTransactionStats({
+            total_transactions: 69,
+            completed_transactions: 34,
+            success_transactions: 27,
+            failed_transactions: 5,
+            pending_transactions: 0,
+            processing_transactions: 0,
+            total_amount: "6934131.00",
+            success_rate: "39.13",
+            avg_processing_time: null,
+            deposits_count: 18,
+            withdrawals_count: 9,
+            deposits_amount: "3583131.00",
+            withdrawals_amount: "3351000.00"
+          })
+        }
+      }
+
+      setIsLoading(false)
+    } catch (err) {
+        setError('Échec du chargement des données du tableau de bord')
+      setIsLoading(false)
+      console.error('Dashboard data fetch error:', err)
+    }
+  }
+
   useEffect(() => {
-    const fetchAllData = async () => {
-      // Fetch summary data
-      setSummaryLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/dashboard/summary/`);
-        setSummary(res);
-      } catch (err: any) {
-        setSummaryError("Échec du chargement du résumé des paiements");
-      } finally {
-        setSummaryLoading(false);
-      }
+    fetchAllData()
+  }, [])
 
-  // Fetch transaction stats
-      setTransactionStatsLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/stats/transactions/`);
-        setTransactionStats(res);
-      } catch (err: any) {
-        setTransactionStatsError("Échec du chargement des statistiques de transactions");
-      } finally {
-        setTransactionStatsLoading(false);
-      }
+  const refreshData = async () => {
+    await fetchAllData()
+    toast({
+      title: "Données Actualisées",
+      description: "Les données du tableau de bord ont été mises à jour avec succès.",
+    })
+  }
 
-  // Fetch system events
-      setSystemEventsLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/system-events/`);
-        setSystemEvents(res.results || []);
-      } catch (err: any) {
-        setSystemEventsError("Échec du chargement des événements système");
-      } finally {
-        setSystemEventsLoading(false);
-      }
+  // Chart data preparation
+  const transactionStatusData = transactionStats ? [
+    { name: 'Réussies', value: transactionStats.success_transactions, color: '#10B981' },
+    { name: 'Échouées', value: transactionStats.failed_transactions, color: '#EF4444' },
+    { name: 'En Attente', value: transactionStats.pending_transactions, color: '#F59E0B' },
+    { name: 'En Cours', value: transactionStats.processing_transactions, color: '#3B82F6' }
+  ] : []
 
-  // Fetch balance operations stats
-      setBalanceOpsLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/admin/balance-operations/stats/`);
-        setBalanceOps(res);
-      } catch (err: any) {
-        setBalanceOpsError("Échec du chargement des statistiques d'opérations de solde");
-      } finally {
-        setBalanceOpsLoading(false);
-      }
+  const paymentProviderData = momoPayStats && waveBusinessStats ? [
+    { name: 'MoMo Pay', transactions: momoPayStats.total_transactions, confirmed: momoPayStats.confirmed_count, rate: momoPayStats.confirmation_rate },
+    { name: 'Wave Business', transactions: waveBusinessStats.total_transactions, confirmed: waveBusinessStats.confirmed_count, rate: waveBusinessStats.confirmation_rate }
+  ] : []
 
-  // Fetch recharge requests stats
-      setRechargeLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/user/recharge_requests/stats/`);
-        setRechargeStats(res);
-      } catch (err: any) {
-        setRechargeError("Échec du chargement des statistiques de recharge");
-      } finally {
-        setRechargeLoading(false);
-      }
+  const userStatsData = notificationStats?.user_stats ? [
+    { name: 'Total', value: notificationStats.user_stats.total_users, color: '#3B82F6' },
+    { name: 'Actifs', value: notificationStats.user_stats.active_users, color: '#10B981' },
+    { name: 'En Attente', value: notificationStats.user_stats.pending_users, color: '#F59E0B' },
+    { name: 'Vérifiés', value: notificationStats.user_stats.verified_users, color: '#8B5CF6' }
+  ] : []
 
-  // Fetch MoMo Pay stats
-      setMomoPayLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/momo-pay-transactions/stats/`);
-        setMomoPayStats(res);
-      } catch (err: any) {
-        setMomoPayError("Échec du chargement des statistiques MoMo Pay");
-      } finally {
-        setMomoPayLoading(false);
-      }
+  // Transaction trends data for line chart
+  const transactionTrendsData = [
+    { name: 'Lun', transactions: 45, revenue: 12000 },
+    { name: 'Mar', transactions: 52, revenue: 15000 },
+    { name: 'Mer', transactions: 38, revenue: 11000 },
+    { name: 'Jeu', transactions: 61, revenue: 18000 },
+    { name: 'Ven', transactions: 48, revenue: 14000 },
+    { name: 'Sam', transactions: 35, revenue: 9500 },
+    { name: 'Dim', transactions: 42, revenue: 12500 }
+  ]
 
-  // Fetch Wave Business stats
-      setWaveLoading(true);
-      try {
-        const res = await apiFetch(`${baseUrl}api/payments/wave-business-transactions/stats/`);
-        setWaveStats(res);
-      } catch (err: any) {
-        setWaveError("Échec du chargement des statistiques Wave Business");
-      } finally {
-        setWaveLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, [apiFetch, baseUrl]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [apiFetch, baseUrl]);
-
-  // Prepare chart data
-  const prepareFinancialChartData = () => {
-    if (!summary || !transactionStats || !balanceOps) return [];
-    return [
-      { name: "Revenus d'aujourd'hui", value: parseFloat(summary.today_revenue) || 0, color: COLORS.primary },
-      { name: "Ajustements totaux", value: parseFloat(balanceOps?.adjustments?.total_credits?.total) || 0, color: COLORS.success },
-      { name: "Remboursements totaux", value: parseFloat(balanceOps?.refunds?.total_amount) || 0, color: COLORS.danger }
-    ];
-  };
-
-  const prepareAdminActivityData = () => {
-    if (!balanceOps) return [];
-    const adjustmentAdmins = balanceOps.adjustments?.by_admin || [];
-    const refundAdmins = balanceOps.refunds?.by_admin || [];
-    const adminMap = new Map();
-
-    adjustmentAdmins.forEach((admin: any) => {
-      const email = admin.created_by__email;
-      if (!adminMap.has(email)) {
-        adminMap.set(email, { email, adjustments: 0, refunds: 0, total: 0 });
-      }
-      const current = adminMap.get(email);
-      current.adjustments = parseFloat(admin.total_amount) || 0;
-      current.total += current.adjustments;
-    });
-
-    refundAdmins.forEach((admin: any) => {
-      const email = admin.created_by__email;
-      if (!adminMap.has(email)) {
-        adminMap.set(email, { email, adjustments: 0, refunds: 0, total: 0 });
-      }
-      const current = adminMap.get(email);
-      current.refunds = parseFloat(admin.total_amount) || 0;
-      current.total += current.refunds;
-    });
-
-    return Array.from(adminMap.values());
-  };
-
-  const prepareTransactionTrendData = () => {
-    if (!transactionStats) return [];
-    return [
-      { name: "Terminées", value: transactionStats.completed_transactions || 0, color: COLORS.success },
-      { name: "En attente", value: transactionStats.pending_transactions || 0, color: COLORS.warning },
-      { name: "Échouées", value: transactionStats.failed_transactions || 0, color: COLORS.danger },
-      { name: "En cours", value: transactionStats.processing_transactions || 0, color: COLORS.info }
-    ];
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader className="animate-spin h-8 w-8 text-orange-500" />
-        <span className="text-lg font-semibold">Chargement...</span>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-800 rounded-lg animate-pulse" />
+            <div className="h-4 w-64 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+          </div>
+          <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded mb-2" />
+                <div className="h-8 w-16 bg-neutral-200 dark:bg-neutral-800 rounded mb-2" />
+                <div className="h-3 w-32 bg-neutral-200 dark:bg-neutral-800 rounded" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <ErrorDisplay
-        error={error}
-        onRetry={fetchStats}
-        variant="full"
-        showDismiss={false}
-      />
-    );
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">
+              Dashboard Overview
+            </h1>
+            <p className="text-muted-foreground">
+              Real-time insights into your payment platform performance.
+            </p>
+          </div>
+        </div>
+        <ErrorDisplay error={error} />
+        <div className="text-center p-8 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <p className="text-yellow-800 dark:text-yellow-200">
+            Le tableau de bord est en mode démo. Veuillez configurer vos points de terminaison API pour voir les vraies données.
+          </p>
+          <Button 
+            onClick={refreshData} 
+            className="mt-4"
+            variant="outline"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    )
   }
-
-  if (!stats) {
-    return null;
-  }
-
-  const financialChartData = prepareFinancialChartData();
-  const adminActivityData = prepareAdminActivityData();
-  const transactionTrendData = prepareTransactionTrendData();
 
   return (
-    <>
-      {/* Auth Error Modal */}
-      <Dialog open={showAuthModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Erreur d'authentification</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-center text-red-600">{authError}</div>
-          <DialogFooter>
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full"
-              onClick={() => { setShowAuthModal(false); router.push("/"); }}
-            >
-              OK
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Main Dashboard Content */}
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          
-          {/* Dashboard Header */}
-        <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-green-500 bg-clip-text text-transparent">
-                  Tableau de bord administrateur
-                </h1>
-                <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
-                  Aperçu en temps réel
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow-sm">
-                  <Switch
-                    id="active-users-toggle"
-                    checked={showOnlyActiveUsers}
-                    onCheckedChange={setShowOnlyActiveUsers}
-                  />
-                  <label htmlFor="active-users-toggle" className="text-sm font-medium">
-                    Afficher uniquement les utilisateurs actifs
-                  </label>
-                </div>
-                  {/* <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow-sm">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {new Date().toLocaleTimeString()}
-                      </span>
-                      </div>
-                  </div> */}
-                    </div>
-                    </div>
-                  </div>
-
-          {/* Key Metrics Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Total Users */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                      <div>
-                    <p className="text-blue-100 text-sm font-medium">Utilisateurs totaux</p>
-                    <p className="text-3xl font-bold">{stats.user_stats.total_users}</p>
-                    <div className="flex items-center mt-2">
-                      <ArrowUpRight className="h-4 w-4 text-green-300" />
-                      <span className="text-sm text-blue-100 ml-1">+{stats.user_stats.users_registered_today} aujourd'hui</span>
-                      </div>
-                      </div>
-                  <div className="bg-white bg-opacity-20 rounded-full p-3">
-                    <Users className="h-8 w-8" />
-                      </div>
-                      </div>
-            </CardContent>
-          </Card>
-
-            {/* Active Tasks */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-100 text-sm font-medium">Tâches actives</p>
-                    <p className="text-3xl font-bold">{stats.task_stats.active}</p>
-                    <div className="flex items-center mt-2">
-                      <Activity className="h-4 w-4 text-green-300" />
-                      <span className="text-sm text-green-100 ml-1">En cours</span>
-              </div>
-                </div>
-                  <div className="bg-white bg-opacity-20 rounded-full p-3">
-                    <ClipboardList className="h-8 w-8" />
-                    </div>
-                  </div>
-              </CardContent>
-            </Card>
-
-            {/* Today's Revenue */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-sm font-medium">Revenus d'aujourd'hui</p>
-                    <p className="text-3xl font-bold">
-                      {summary ? `${parseFloat(summary.today_revenue || 0).toFixed(2)}` : '0.00'} FCFA
-                    </p>
-                    <div className="flex items-center mt-2">
-                      <TrendingUp className="h-4 w-4 text-purple-300" />
-                      <span className="text-sm text-purple-100 ml-1">
-                        {summary ? `${summary.today_success_rate?.toFixed(1)}%` : '0%'} taux de réussite
-                    </span>
-                    </div>
-                  </div>
-                  <div className="bg-white bg-opacity-20 rounded-full p-3">
-                    <DollarSign className="h-8 w-8" />
-                    </div>
-                    </div>
-            </CardContent>
-          </Card>
-
-            {/* System Status */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-100 text-sm font-medium">Statut du système</p>
-                    <p className="text-3xl font-bold">
-                      {stats.notification_info.async_enabled ? 'En ligne' : 'Hors ligne'}
-                    </p>
-                    <div className="flex items-center mt-2">
-                      {stats.notification_info.async_enabled ? (
-                        <CheckCircle className="h-4 w-4 text-green-300" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-300" />
-                      )}
-                      <span className="text-sm text-orange-100 ml-1">
-                        {stats.notification_info.async_enabled ? 'Tous les systèmes' : 'Problèmes détectés'}
-                      </span>
-              </div>
-              </div>
-                  <div className="bg-white bg-opacity-20 rounded-full p-3">
-                    <Shield className="h-8 w-8" />
-              </div>
-                </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            Aperçu du Tableau de Bord
+          </h1>
+          <p className="text-muted-foreground">
+            Aperçus en temps réel des performances de votre plateforme de paiement.
+          </p>
         </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Afficher seulement les utilisateurs actifs</span>
+            <Switch 
+              checked={showOnlyActiveUsers} 
+              onCheckedChange={setShowOnlyActiveUsers}
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={refreshData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualiser
+          </Button>
+        </div>
+      </div>
 
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Financial Overview Chart */}
-      {financialChartData.length > 0 && (
-              <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                  <CardTitle className="flex items-center space-x-2">
-                    <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-orange-600 dark:text-orange-300" />
+      {/* Dashboard Summary - Today's Performance */}
+      {dashboardSummary && (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Transactions d'Aujourd'hui</p>
+                  <p className="text-2xl font-bold text-foreground">{dashboardSummary.today_transactions || 0}</p>
+                <div className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-500">{dashboardSummary.today_completed || 0} terminées</span>
+                </div>
               </div>
-                    <span>Aperçu financier</span>
-              </CardTitle>
-            </CardHeader>
-                <CardContent className="p-6">
-              <div className="h-80">
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Revenus d'Aujourd'hui</p>
+                  <p className="text-2xl font-bold text-foreground">{dashboardSummary.today_revenue?.toLocaleString() || '0'} XOF</p>
+                <div className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-500">{dashboardSummary.today_success_rate?.toFixed(1) || '0'}% taux de réussite</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Appareils en Ligne</p>
+                  <p className="text-2xl font-bold text-foreground">{dashboardSummary.online_devices || 0}</p>
+                <div className="flex items-center gap-1">
+                    <Activity className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-500">Actuellement actifs</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Monitor className="h-6 w-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Transactions en Attente</p>
+                  <p className="text-2xl font-bold text-foreground">{dashboardSummary.pending_transactions || 0}</p>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-yellow-500" />
+                    <span className="text-xs text-yellow-500">En attente de traitement</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                  <Timer className="h-6 w-6 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+                </div>
+      )}
+
+      {/* User Statistics */}
+      {notificationStats?.user_stats && (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Utilisateurs Totaux</p>
+                  <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.total_users}</p>
+                <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3 text-blue-500" />
+                    <span className="text-xs text-blue-500">Tous les temps</span>
+                </div>
+              </div>
+                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Utilisateurs Actifs</p>
+                  <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.active_users}</p>
+                <div className="flex items-center gap-1">
+                    <Activity className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-500">{notificationStats.user_stats.users_registered_week} cette semaine</span>
+                </div>
+              </div>
+                <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Utilisateurs Vérifiés</p>
+                  <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.verified_users}</p>
+                <div className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-500">Email vérifié</span>
+                </div>
+              </div>
+                <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Utilisateurs en Attente</p>
+                  <p className="text-2xl font-bold text-foreground">{notificationStats.user_stats.pending_users}</p>
+                <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-yellow-500" />
+                    <span className="text-xs text-yellow-500">En attente de vérification</span>
+                </div>
+              </div>
+                <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      )}
+
+      {/* Transaction Statistics Charts */}
+      {transactionStats && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-primary" />
+                Distribution du Statut des Transactions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  <RechartsPieChart>
                     <Pie
-                      data={financialChartData}
+                      data={transactionStatusData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                          label={({ name, value }) => `${name}: ${value.toFixed(2)} FCFA`}
-                      outerRadius={80}
-                      fill="#8884d8"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
                       dataKey="value"
                     >
-                      {financialChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      {transactionStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                        <Tooltip formatter={(value) => [`${value} FCFA`, 'Montant']} />
-                    <Legend />
-                  </PieChart>
+                    <Tooltip />
+                  </RechartsPieChart>
                 </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-            )}
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Transaction Trends */}
-            {transactionTrendData.length > 0 && (
-              <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                  <CardTitle className="flex items-center space-x-2">
-                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                      <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-300" />
-              </div>
-                    <span>Tendances des transactions</span>
-              </CardTitle>
-            </CardHeader>
-                <CardContent className="p-6">
-              <div className="h-80">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <LineChart className="h-5 w-5 text-primary" />
+                Tendances des Transactions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={transactionTrendData}>
-                        <XAxis dataKey="name" />
+                  <RechartsLineChart data={transactionTrendsData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                        <Bar dataKey="value" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+                    <Line type="monotone" dataKey="transactions" stroke="#00A86B" strokeWidth={2} />
+                    <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      )}
+
+      {/* Transaction Overview */}
+      {transactionStats && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Aperçu des Transactions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600">{transactionStats.success_transactions}</p>
+                  <p className="text-sm text-green-600">Réussies</p>
+                  </div>
+                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">{transactionStats.failed_transactions}</p>
+                  <p className="text-sm text-red-600">Échouées</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Montant Total</span>
+                    <span className="font-semibold">{parseFloat(transactionStats.total_amount || '0').toLocaleString()} XOF</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Taux de Réussite</span>
+                  <span className="font-semibold text-green-600">{transactionStats.success_rate}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Dépôts</span>
+                    <span className="font-semibold">{parseFloat(transactionStats.deposits_amount || '0').toLocaleString()} XOF</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Retraits</span>
+                    <span className="font-semibold">{parseFloat(transactionStats.withdrawals_amount || '0').toLocaleString()} XOF</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payment Provider Statistics */}
+      {momoPayStats && waveBusinessStats && (
+        <div className="space-y-6">
+          {/* Payment Provider Comparison Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Comparaison des Fournisseurs de Paiement
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={paymentProviderData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="transactions" fill="#3B82F6" name="Transactions Totales" />
+                    <Bar dataKey="confirmed" fill="#10B981" name="Confirmées" />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-            )}
-          </div>
-
-          {/* Detailed Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* User Statistics */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <Users className="h-5 w-5 text-orange-600 dark:text-orange-300" />
-                  </div>
-                  <span>Statistiques des utilisateurs</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Utilisateurs totaux</span>
-                    <Badge className="bg-blue-600 text-white">{stats.user_stats.total_users}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Utilisateurs actifs</span>
-                    <Badge className="bg-green-600 text-white">{stats.user_stats.active_users}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Utilisateurs en attente</span>
-                    <Badge className="bg-yellow-600 text-white">{stats.user_stats.pending_users}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Utilisateurs vérifiés</span>
-                    <Badge className="bg-purple-600 text-white">{stats.user_stats.verified_users}</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Task Statistics */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <ClipboardList className="h-5 w-5 text-green-600 dark:text-green-300" />
-              </div>
-                  <span>Statistiques des tâches</span>
-              </CardTitle>
-            </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Tâches actives</span>
-                    <Badge className="bg-green-600 text-white">{stats.task_stats.active}</Badge>
-                </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Tâches programmées</span>
-                    <Badge className="bg-blue-600 text-white">{stats.task_stats.scheduled}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Tâches réservées</span>
-                    <Badge className="bg-orange-600 text-white">{stats.task_stats.reserved}</Badge>
-                  </div>
-                  </div>
-              </CardContent>
-            </Card>
-
-            {/* System Information */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <Settings className="h-5 w-5 text-purple-600 dark:text-purple-300" />
-                  </div>
-                  <span>Informations système</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Service email</span>
-                    <Badge variant="outline">{stats.notification_info.email_service}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Service SMS</span>
-                    <Badge variant="outline">{stats.notification_info.sms_service}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Asynchrone activé</span>
-                    <Badge className={stats.notification_info.async_enabled ? "bg-green-600 text-white" : "bg-red-600 text-white"}>
-                      {stats.notification_info.async_enabled ? 'Oui' : 'Non'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-                    <span className="text-sm font-medium">Journalisation activée</span>
-                    <Badge className={stats.notification_info.logging_enabled ? "bg-green-600 text-white" : "bg-red-600 text-white"}>
-                      {stats.notification_info.logging_enabled ? 'Oui' : 'Non'}
-                    </Badge>
-                </div>
-                </div>
-            </CardContent>
-          </Card>
-        </div>
-
-          {/* Payment & Transaction Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Payment Summary */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                    <CreditCard className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
             </div>
-                  <span>Résumé des paiements</span>
-            </CardTitle>
-          </CardHeader>
-              <CardContent className="p-6">
-                {summaryLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                <Loader className="animate-spin mr-2" /> Chargement...
-              </div>
-                ) : summaryError ? (
-                  <div className="text-red-600 text-center py-4">{summaryError}</div>
-                ) : summary ? (
-              <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg">
-                      <div className="text-sm text-orange-600 dark:text-orange-300 font-medium">Transactions d'aujourd'hui</div>
-                      <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{summary.today_transactions}</div>
-                    </div>
-                    <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg">
-                      <div className="text-sm text-green-600 dark:text-green-300 font-medium">Terminées</div>
-                      <div className="text-2xl font-bold text-green-900 dark:text-green-100">{summary.today_completed}</div>
-                    </div>
-                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg">
-                      <div className="text-sm text-purple-600 dark:text-purple-300 font-medium">Revenus</div>
-                      <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{parseFloat(summary.today_revenue || 0).toFixed(2)} FCFA</div>
-                    </div>
-                    <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-lg">
-                      <div className="text-sm text-orange-600 dark:text-orange-300 font-medium">Taux de réussite</div>
-                      <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{summary.today_success_rate?.toFixed(1)}%</div>
-                    </div>
-              </div>
-            ) : (
-                  <div className="text-gray-500 text-center py-8">Aucune donnée disponible</div>
-            )}
           </CardContent>
         </Card>
 
-            {/* System Events */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-cyan-100 dark:bg-cyan-900 rounded-lg">
-                    <AlertCircle className="h-5 w-5 text-cyan-600 dark:text-cyan-300" />
-            </div>
-                  <span>Événements système récents</span>
+          {/* Individual Provider Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-primary" />
+                  Performance MoMo Pay
             </CardTitle>
           </CardHeader>
-              <CardContent className="p-6">
-            {systemEventsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                <Loader className="animate-spin mr-2" /> Chargement...
-              </div>
-            ) : systemEventsError ? (
-                  <div className="text-red-600 text-center py-4">{systemEventsError}</div>
-            ) : systemEvents && systemEvents.length > 0 ? (
-                  <div className="space-y-4 max-h-80 overflow-y-auto">
-                {systemEvents.slice(0, 5).map((event, idx) => (
-                      <div key={event.uid} className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-sm">{event.event_type.replace(/_/g, " ").toUpperCase()}</span>
-                          <Badge variant="outline" className="text-xs">{event.level}</Badge>
-                    </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">{event.description}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(event.created_at).toLocaleString()}
-                        </div>
+          <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <p className="text-2xl font-bold text-blue-600">{momoPayStats.total_transactions}</p>
+                      <p className="text-sm text-blue-600">Transactions Totales</p>
                   </div>
-                ))}
-              </div>
-            ) : (
-                  <div className="text-gray-500 text-center py-8">Aucun événement récent</div>
-            )}
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <p className="text-2xl font-bold text-green-600">{momoPayStats.confirmed_count}</p>
+                      <p className="text-sm text-green-600">Confirmées</p>
+                </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Taux de Confirmation</span>
+                      <span className="font-semibold text-green-600">{(momoPayStats.confirmation_rate || 0).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Montant Total</span>
+                      <span className="font-semibold">{(momoPayStats.total_amount_confirmed || 0).toLocaleString()} XOF</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">En Attente</span>
+                      <span className="font-semibold text-yellow-600">{momoPayStats.pending_count}</span>
+                    </div>
+                  </div>
+            </div>
+          </CardContent>
+        </Card>
+
+            <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                  <Waves className="h-5 w-5 text-primary" />
+                  Performance Wave Business
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <p className="text-2xl font-bold text-blue-600">{waveBusinessStats.total_transactions}</p>
+                      <p className="text-sm text-blue-600">Transactions Totales</p>
+                      </div>
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <p className="text-2xl font-bold text-green-600">{waveBusinessStats.confirmed_count}</p>
+                      <p className="text-sm text-green-600">Confirmées</p>
+                      </div>
+                    </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Taux de Confirmation</span>
+                      <span className="font-semibold text-green-600">{(waveBusinessStats.confirmation_rate || 0).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Montant Total</span>
+                      <span className="font-semibold">{(waveBusinessStats.total_amount_confirmed || 0).toLocaleString()} XOF</span>
+                  </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">En Attente</span>
+                      <span className="font-semibold text-yellow-600">{waveBusinessStats.pending_count}</span>
+                </div>
+                  </div>
+            </div>
+          </CardContent>
+        </Card>
+          </div>
+        </div>
+      )}
+
+      {/* System Events */}
+      {systemEvents && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Événements Système Récents ({systemEvents.count || 0} au total)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {systemEvents.results?.length > 0 ? (
+                systemEvents.results.slice(0, 10).map((event) => (
+                  <div key={event.uid} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-2 w-2 rounded-full ${
+                        event.level === 'error' ? 'bg-red-500' : 
+                        event.level === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                      }`} />
+                      <div>
+                        <p className="font-medium text-foreground">{event.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {event.device_id} • {new Date(event.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={event.level === 'error' ? 'destructive' : 'secondary'}>
+                      {event.event_type}
+                      </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Aucune donnée de statut de demande de recharge disponible</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Balance Operations */}
+      {balanceOperations && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <DollarIcon className="h-5 w-5 text-primary" />
+                Résumé des Remboursements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">{balanceOperations.refunds?.total_count || 0}</p>
+                  <p className="text-sm text-red-600">Remboursements Totaux</p>
+                      </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Montant Total</span>
+                    <span className="font-semibold text-red-600">{(balanceOperations.refunds?.total_amount || 0).toLocaleString()} XOF</span>
+                      </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Période</span>
+                    <span className="font-semibold">{balanceOperations.period_days || 0} jours</span>
+                    </div>
+                    </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary" />
+                Résumé des Ajustements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+              <div className="space-y-4">
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600">{balanceOperations.adjustments?.total_count || 0}</p>
+                  <p className="text-sm text-blue-600">Ajustements Totaux</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Crédits</span>
+                    <span className="font-semibold text-green-600">{balanceOperations.adjustments?.total_credits?.count || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Débits</span>
+                    <span className="font-semibold text-red-600">{balanceOperations.adjustments?.total_debits?.count || 0}</span>
+                  </div>
+                </div>
+            </div>
           </CardContent>
         </Card>
       </div>
+      )}
 
-          {/* Additional Stats Cards */}
-          {rechargeStats && (
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mb-8">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-sky-100 dark:bg-sky-900 rounded-lg">
-                    <RefreshCw className="h-5 w-5 text-sky-600 dark:text-sky-300" />
-                  </div>
-                  <span>Aperçu des demandes de recharge</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-sky-600 dark:text-sky-300">{rechargeStats.total_requests}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Demandes totales</div>
-                  </div>
-                  <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-300">{rechargeStats.pending_review}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">En attente de révision</div>
-                  </div>
-                  <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">{parseFloat(rechargeStats.total_approved_amount || 0).toFixed(2)} FCFA</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Montant approuvé</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Balance Operations */}
-          {balanceOps && (
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg mb-8">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+      {/* Recharge Requests */}
+      {rechargeRequests && (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Statistiques des Demandes de Recharge
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {rechargeRequests.by_status ? Object.entries(rechargeRequests.by_status).map(([key, status]) => (
+                <div key={key} className="text-center p-4 bg-accent/50 rounded-lg">
+                  <p className="text-2xl font-bold text-foreground">{status.count || 0}</p>
+                  <p className="text-sm text-muted-foreground">{status.name || 'Unknown'}</p>
+              </div>
+              )) : (
+                <div className="col-span-full text-center p-8 text-muted-foreground">
+                  <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Aucune donnée de statut de demande de recharge disponible</p>
+            </div>
+              )}
+              </div>
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Demandes Totales</span>
+                <span className="font-semibold">{rechargeRequests.total_requests || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Montant Total Approuvé</span>
+                <span className="font-semibold text-green-600">{(rechargeRequests.total_approved_amount || 0).toLocaleString()} XOF</span>
+            </div>
           </div>
-                  <span>Opérations de solde</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">{balanceOps.adjustments.total_count}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Ajustements totaux</div>
-                  </div>
-                  <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">{balanceOps.adjustments.total_credits.count}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Crédits</div>
-                  </div>
-                  <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">{balanceOps.adjustments.total_debits.count}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Débits</div>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-300">{balanceOps.refunds.total_count}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Remboursements</div>
-                  </div>
+        </CardContent>
+      </Card>
+      )}
+
+      {/* Service Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">MoMo Pay</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-500">Actif</span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+              <Smartphone className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Payment Methods Statistics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* MoMo Pay Statistics */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <Smartphone className="h-5 w-5 text-green-600 dark:text-green-300" />
-                  </div>
-                  <span>Statistiques MoMo Pay</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {momoPayLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader className="animate-spin mr-2" /> Chargement...
-                  </div>
-                ) : momoPayError ? (
-                  <div className="text-red-600 text-center py-4">{momoPayError}</div>
-                ) : momoPayStats ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-green-600 dark:text-green-300 font-medium">Total Transactions</div>
-                        <div className="text-2xl font-bold text-green-900 dark:text-green-100">{momoPayStats.total_transactions || 0}</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-orange-600 dark:text-orange-300 font-medium">Montant Total</div>
-                        <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{parseFloat((momoPayStats.total_amount || 0).toString()).toFixed(2)} FCFA</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-emerald-600 dark:text-emerald-300 font-medium">Confirmées</div>
-                        <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{momoPayStats.confirmed_count || 0}</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-yellow-600 dark:text-yellow-300 font-medium">En Attente</div>
-                        <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{momoPayStats.pending_count || 0}</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-red-600 dark:text-red-300 font-medium">Annulées</div>
-                        <div className="text-2xl font-bold text-red-900 dark:text-red-100">{momoPayStats.cancelled_count || 0}</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-orange-600 dark:text-orange-300 font-medium">Échouées</div>
-                        <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{momoPayStats.failed_count || 0}</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-500 text-center py-8">Aucune donnée disponible</div>
-                )}
-              </CardContent>
-            </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Wave Business</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-500">Actif</span>
+                </div>
+              </div>
+              <Waves className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Wave Business Statistics */}
-            <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <Waves className="h-5 w-5 text-orange-600 dark:text-orange-300" />
-                  </div>
-                  <span>Statistiques Wave Business</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {waveLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader className="animate-spin mr-2" /> Chargement...
-                  </div>
-                ) : waveError ? (
-                  <div className="text-red-600 text-center py-4">{waveError}</div>
-                ) : waveStats ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-orange-600 dark:text-orange-300 font-medium">Total Transactions</div>
-                        <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{waveStats.total_transactions || 0}</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-purple-600 dark:text-purple-300 font-medium">Montant Total</div>
-                        <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{parseFloat((waveStats.total_amount || 0).toString()).toFixed(2)} FCFA</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-emerald-600 dark:text-emerald-300 font-medium">Confirmées</div>
-                        <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{waveStats.confirmed_count || 0}</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-yellow-600 dark:text-yellow-300 font-medium">En Attente</div>
-                        <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{waveStats.pending_count || 0}</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-red-600 dark:text-red-300 font-medium">Annulées</div>
-                        <div className="text-2xl font-bold text-red-900 dark:text-red-100">{waveStats.cancelled_count || 0}</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 rounded-lg">
-                        <div className="text-sm text-orange-600 dark:text-orange-300 font-medium">Expirées</div>
-                        <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{waveStats.expired_count || 0}</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-500 text-center py-8">Aucune donnée disponible</div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Service SMS</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-500">Actif</span>
+                </div>
+              </div>
+              <MessageSquare className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Service FCM</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-500">Actif</span>
+                </div>
+              </div>
+              <Bell className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
-    </>
   )
 }

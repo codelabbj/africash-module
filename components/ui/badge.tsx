@@ -4,22 +4,24 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 shadow-sm",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700",
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80 shadow-subtle",
         secondary:
-          "border-transparent bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 hover:from-gray-200 hover:to-gray-300 dark:from-gray-700 dark:to-gray-800 dark:text-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-700",
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
-          "border-transparent bg-gradient-to-r from-red-600 to-pink-600 text-white hover:from-red-700 hover:to-pink-700",
-        outline: "border-2 border-gray-200 bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800/80 dark:text-gray-300 dark:hover:bg-gray-700",
-        success: "border-transparent bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700",
-        warning: "border-transparent bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-700 hover:to-red-700",
-        info: "border-transparent bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800",
-        premium: "border-transparent bg-gradient-to-r from-blue-600 via-pink-600 to-orange-600 text-white hover:from-blue-700 hover:via-pink-700 hover:to-orange-700",
-        glass: "border border-white/30 bg-white/20 backdrop-blur-md text-white hover:bg-white/30",
+          "border-transparent bg-red-500 text-white hover:bg-red-600 shadow-subtle",
+        success:
+          "border-transparent bg-green-500 text-white hover:bg-green-600 shadow-subtle",
+        warning:
+          "border-transparent bg-amber-500 text-white hover:bg-amber-600 shadow-subtle",
+        info:
+          "border-transparent bg-green-500 text-white hover:bg-green-600 shadow-subtle",
+        outline: "text-foreground border-border hover:bg-accent",
+        minimal: "border-0 bg-transparent text-muted-foreground hover:text-foreground",
       },
     },
     defaultVariants: {
