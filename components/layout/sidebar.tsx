@@ -104,12 +104,12 @@ export function Sidebar() {
       icon: Bell,
       current: pathname === "/dashboard/fcm-logs/list",
     },
-    {
-      name: t("nav.partner"),
-      href: "/dashboard/partner",
-      icon: User,
-      current: pathname === "/dashboard/partner",
-    },
+    // {
+    //   name: t("nav.partner"),
+    //   href: "/dashboard/partner",
+    //   icon: User,
+    //   current: pathname === "/dashboard/partner",
+    // },
     {
       name: t("topup.title"),
       href: "/dashboard/topup",
