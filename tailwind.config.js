@@ -42,16 +42,16 @@ module.exports = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          50: "#fafafa",
-          100: "#f5f5f5",
-          200: "#e5e5e5",
-          300: "#d4d4d4",
-          400: "#a3a3a3",
-          500: "#000000",
-          600: "#171717",
-          700: "#262626",
-          800: "#404040",
-          900: "#171717",
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#f97316",
+          600: "#ea580c",
+          700: "#c2410c",
+          800: "#9a3412",
+          900: "#7c2d12",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -77,7 +77,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom minimalist turaincashette
+        // Custom minimalist zefastette
         neutral: {
           50: "#fafafa",
           100: "#f5f5f5",
