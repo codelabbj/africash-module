@@ -204,7 +204,7 @@ interface WaveBusinessStats {
   confirmation_rate: number
 }
 
-// Ultra-minimalist color Zefastette
+// Ultra-minimalist color Africashette
 const COLORS = {
   primary: '#00A86B',
   secondary: '#6B7280',
